@@ -1,8 +1,9 @@
-import cdk = require('@aws-cdk/core');
-import lambda = require('@aws-cdk/aws-lambda');
-import * as iam from '@aws-cdk/aws-iam';
-import * as s3 from '@aws-cdk/aws-s3';
-import { S3EventSource } from '@aws-cdk/aws-lambda-event-sources';
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import { S3EventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 export interface LambdaPatternConstructProps {
   projectFullName: string;
@@ -18,11 +19,11 @@ export interface LambdaPatternConstructProps {
   bucketSuffix?: string[];
 }
 
-export class LambdaPatternConstruct extends cdk.Construct {
+export class LambdaPatternConstruct extends Construct {
   public readonly lambdaFunction: lambda.Function;
   public readonly lambdaRole: iam.Role;
 
-  constructor(scope: cdk.Construct, id: string, props: LambdaPatternConstructProps) {
+  constructor(scope: Construct, id: string, props: LambdaPatternConstructProps) {
     super(scope, id);
 
     const lambdaName: string = `${props.projectFullName}-${props.baseName}-Lambda`;
@@ -39,7 +40,7 @@ export class LambdaPatternConstruct extends cdk.Construct {
       functionName: lambdaName,
       code: lambda.Code.fromAsset(lambdaPath),
       handler: props.handler != undefined ? props.handler : 'handler.handle',
-      runtime: lambda.Runtime.PYTHON_3_7,
+      runtime: lambda.Runtime.PYTHON_3_12,
       timeout: props.timeout != undefined ? props.timeout : cdk.Duration.seconds(60 * 3),
       role: lambdaRole,
       environment: props.environments,
@@ -47,32 +48,22 @@ export class LambdaPatternConstruct extends cdk.Construct {
     });
 
     if (props.bucket != undefined) {
-      const filterList: any[] = [];
-      // const filters: any = {};
       if (props.bucketPrefix != undefined && props.bucketPrefix.length > 0) {
-        for (var item of props.bucketPrefix) {
+        for (const item of props.bucketPrefix) {
           lambdaFunction.addEventSource(new S3EventSource(props.bucket, {
             events: [s3.EventType.OBJECT_CREATED_PUT, s3.EventType.OBJECT_CREATED_COPY],
-            filters: [{prefix: item}]
+            filters: [{ prefix: item }],
           }));
-          // filterList.push({prefix: item});
-          // filters['prefix'] = props.bucketPrefix;
         }
       }
       if (props.bucketSuffix != undefined && props.bucketSuffix.length > 0) {
-        for (var item of props.bucketSuffix) {
+        for (const item of props.bucketSuffix) {
           lambdaFunction.addEventSource(new S3EventSource(props.bucket, {
             events: [s3.EventType.OBJECT_CREATED_PUT, s3.EventType.OBJECT_CREATED_COPY],
-            filters: [{suffix: item}]
+            filters: [{ suffix: item }],
           }));
-          // filterList.push({suffix: item});
-          // filters['suffix'] = props.bucketSuffix;
         }
       }
-      // lambdaFunction.addEventSource(new S3EventSource(props.bucket, {
-      //   events: [s3.EventType.OBJECT_CREATED],
-      //   filters: filterList
-      // }));
     }
 
     return lambdaFunction;
@@ -85,7 +76,7 @@ export class LambdaPatternConstruct extends cdk.Construct {
     });
 
     role.addManagedPolicy({ managedPolicyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole' });
-    for (var item of policies) {
+    for (const item of policies) {
       if (item instanceof iam.PolicyStatement) {
         role.addToPolicy(item);
       } else {
@@ -96,13 +87,13 @@ export class LambdaPatternConstruct extends cdk.Construct {
     return role;
   }
 
-  private loadLayers(lambdaName: string, layerArns: string[]): any[] {
-    var layers = [];
+  private loadLayers(lambdaName: string, layerArns: string[]): lambda.ILayerVersion[] {
+    const layers: lambda.ILayerVersion[] = [];
 
     if (layerArns != undefined && layerArns.length > 0) {
-      for (var arn of layerArns) {
-        let list: string[] = arn.split(':');
-        layers.push(lambda.LayerVersion.fromLayerVersionArn(this, `${lambdaName}-${list[list.length - 2]}-layer`, arn))
+      for (const arn of layerArns) {
+        const list: string[] = arn.split(':');
+        layers.push(lambda.LayerVersion.fromLayerVersionArn(this, `${lambdaName}-${list[list.length - 2]}-layer`, arn));
       }
     }
 

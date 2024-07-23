@@ -146,30 +146,30 @@ Enable a IoT rule option(***IoTRuleEnable***) in ***config/app-config-demo.json*
 ...
     "DataPipeline": {
         "Name": "DataPipelineStack",
-
-        "IoTRuleEnable": true, <----- enable this value
+        "IoTRuleEnable": true,
         "IoTRuleTopic": "$aws/rules",
         "IoTRuleTopic-Desc": "https://docs.aws.amazon.com/iot/latest/developerguide/iot-basic-ingest.html",
         "IoTRuleNameFirehoseIngestion": "firehose_ingestion",
-
         "DomainName": "iot-data",
         "MasterUserName": "iotdataadmin",
-        "ESConditionAddress": [],
-        "ElasticsearchSelection": "DEVELOP",
-        "ElasticsearchCandidate": {
-            "DEVELOP": {
-            },
-            "CUSTOM": {
-                "VolumeSize": 40,
-                "AZCount": 3,
-                "MasterNodeCount": 3,
-                "MasterNodeType": "r5.large.elasticsearch",
-                "DataNodeCount": 3,
-                "DataNodeType": "r5.large.elasticsearch"
-            },
-            "LEGACY": {
-                "DomainEndpoint": ""
-            }
+        "OSConditionAddress": [],
+        "OpenSearchSelection": "DEVELOP",
+        "OpenSearchCandidate": {
+        "DEVELOP": {
+            "MasterNodeType": "t3.small.search",
+            "DataNodeType": "t3.small.search"
+        },
+        "CUSTOM": {
+            "VolumeSize": 40,
+            "AZCount": 3,
+            "MasterNodeCount": 3,
+            "MasterNodeType": "t3.small.search",
+            "DataNodeCount": 3,
+            "DataNodeType": "t3.small.search"
+        },
+        "LEGACY": {
+            "DomainEndpoint": ""
+        }
         }
     },
 ...
@@ -186,7 +186,9 @@ You can check the deployment results as shown in the following picture.
 
 ![cloudformation-stacks](docs/asset/cloudformation-stacks.png)
 
-You can also check that the rules are registered.
+You can also check that the rules are registered. 
+
+https://us-east-1.console.aws.amazon.com/iot/home?region=us-east-1#/rulehub
 
 ![iot-rules](docs/asset/iot-rules.png)
 

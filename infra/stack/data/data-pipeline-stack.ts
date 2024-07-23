@@ -1,14 +1,14 @@
-import * as cdk from '@aws-cdk/core';
-import * as iam from '@aws-cdk/aws-iam';
-import * as iot from '@aws-cdk/aws-iot';
-import * as es from '@aws-cdk/aws-elasticsearch';
-import * as hose from '@aws-cdk/aws-kinesisfirehose';
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as iot from 'aws-cdk-lib/aws-iot';
+import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
+import * as hose from 'aws-cdk-lib/aws-kinesisfirehose';
 
 import * as base from '../../../lib/template/stack/base/base-stack';
 import { AppContext } from '../../../lib/template/app-context';
 
-
-enum ElasticsearchSelection {
+enum OpenSearchSelection {
     DEVELOP,
     CUSTOM,
     LEGACY
@@ -19,19 +19,19 @@ export class DataPipelineStack extends base.BaseStack {
     constructor(appContext: AppContext, stackConfig: any) {
         super(appContext, stackConfig);
 
-        const domain = this.createElasticsearch();
+        const domain = this.createOpenSearch();
 
-        const fhose = this.createFirehose2ES(domain);
+        const fhose = this.createFirehose2OS(domain);
 
         if (fhose != undefined) {
             this.createIoTRuleToFirehose(stackConfig.IoTRuleNameFirehoseIngestion, fhose.deliveryStreamName!);
         }
     }
 
-    private createFirehose2ES(domain: es.IDomain): hose.CfnDeliveryStream|undefined {
-        const esBucket = this.createS3Bucket('firehost-es')
+    private createFirehose2OS(domain: opensearch.IDomain): hose.CfnDeliveryStream | undefined {
+        const osBucket = this.createS3Bucket('firehose-os')
 
-        const baseName = 'Firehose2ES';
+        const baseName = 'Firehose2OS';
         const role = new iam.Role(this, `${baseName}Role`, {
             roleName: `${this.projectPrefix}-${baseName}Role`,
             assumedBy: new iam.ServicePrincipal('firehose.amazonaws.com'),
@@ -71,20 +71,19 @@ export class DataPipelineStack extends base.BaseStack {
                 ]
             })
         );
-        this.exportOutput('Firehose2ESRole', role.roleArn)
+        this.exportOutput('Firehose2OSRole', role.roleArn)
 
         if (this.stackConfig.IoTRuleEnable) {
-            // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-kinesisfirehose-deliverystream-elasticsearchdestinationconfiguration.html#cfn-kinesisfirehose-deliverystream-elasticsearchdestinationconfiguration-indexrotationperiod
             const fhose = new hose.CfnDeliveryStream(this, 'firehose', {
-                deliveryStreamName: `${this.projectPrefix}-ES-Delivery`,
+                deliveryStreamName: `${this.projectPrefix}-OS-Delivery`,
                 elasticsearchDestinationConfiguration: {
                     indexName: 'index-thing-data',
-                    domainArn:domain.domainArn,
+                    domainArn: domain.domainArn,
                     roleArn: role.roleArn,
                     indexRotationPeriod: 'OneDay',
                     s3BackupMode: 'FailedDocumentsOnly',
                     s3Configuration: {
-                        bucketArn: esBucket.bucketArn,
+                        bucketArn: osBucket.bucketArn,
                         roleArn: role.roleArn,
                         prefix: 'fail',
                     }
@@ -124,24 +123,25 @@ export class DataPipelineStack extends base.BaseStack {
         });
     }
 
-    private createElasticsearch(): es.IDomain {
+    private createOpenSearch(): opensearch.IDomain {
         let domain = undefined;
-        const temp: string = this.stackConfig.ElasticsearchSelection;
-        const selection: ElasticsearchSelection = (<any>ElasticsearchSelection)[temp];
-        const selectionName = Object.values(ElasticsearchSelection)[selection];
-        console.info('==> Elasticsearch Selection: ', selectionName);
+        const temp: string = this.stackConfig.OpenSearchSelection;
+        const selection: OpenSearchSelection = (<any>OpenSearchSelection)[temp];
+        const selectionName = Object.values(OpenSearchSelection)[selection];
+        console.info('==> OpenSearch Selection: ', selectionName);
 
         const domainName = this.stackConfig.DomainName;
         const fullDomainName = `${this.projectPrefix}-${domainName}`.toLowerCase().replace('_', '-');
         const masterUserName = this.stackConfig.MasterUserName;
-        const conditions = this.createPolicyConditions(this.stackConfig.ESConditionAddress);
+        const ipAddressList = this.stackConfig.OSConditionAddress || []; // Ensure this is defined
+        const conditions = this.createPolicyConditions(ipAddressList);
 
-        if (selection == ElasticsearchSelection.DEVELOP) {
-            const config = this.stackConfig.ElasticsearchCandidate[selectionName]
+        if (selection == OpenSearchSelection.DEVELOP) {
+            const config = this.stackConfig.OpenSearchCandidate[selectionName]
 
-            domain = new es.Domain(this, domainName, {
+            domain = new opensearch.Domain(this, domainName, {
                 domainName: fullDomainName,
-                version: es.ElasticsearchVersion.V7_9,
+                version: opensearch.EngineVersion.OPENSEARCH_2_13,
                 enforceHttps: true,
                 nodeToNodeEncryption: true,
                 encryptionAtRest: {
@@ -151,7 +151,6 @@ export class DataPipelineStack extends base.BaseStack {
                     masterNodeInstanceType: config.MasterNodeType,
                     dataNodeInstanceType: config.DataNodeType
                 },
-
                 logging: {
                     slowSearchLogEnabled: true,
                     appLogEnabled: true,
@@ -173,12 +172,12 @@ export class DataPipelineStack extends base.BaseStack {
                     })
                 ]
             });
-        } else if (selection == ElasticsearchSelection.CUSTOM) {
-            const config = this.stackConfig.ElasticsearchCandidate[selectionName]
+        } else if (selection == OpenSearchSelection.CUSTOM) {
+            const config = this.stackConfig.OpenSearchCandidate[selectionName]
 
-            domain = new es.Domain(this, domainName, {
+            domain = new opensearch.Domain(this, domainName, {
                 domainName: fullDomainName,
-                version: es.ElasticsearchVersion.V7_9,
+                version: opensearch.EngineVersion.OPENSEARCH_1_0,
                 capacity: {
                     masterNodes: config.MasterNodeCount,
                     masterNodeInstanceType: config.MasterNodeType,
@@ -213,22 +212,22 @@ export class DataPipelineStack extends base.BaseStack {
                 ]
             });
 
-        } else if (selection == ElasticsearchSelection.LEGACY) {
-            const config = this.stackConfig.ElasticsearchCandidate[selectionName]
+        } else if (selection == OpenSearchSelection.LEGACY) {
+            const config = this.stackConfig.OpenSearchCandidate[selectionName]
 
             const domainEndpoint = config.DomainEndpoint;
-            domain = es.Domain.fromDomainEndpoint(this, domainName, domainEndpoint);
+            domain = opensearch.Domain.fromDomainEndpoint(this, domainName, domainEndpoint);
         } else {
-            console.error('Elasticsearch Creation Fail - Wrong Selection');
+            console.error('OpenSearch Creation Fail - Wrong Selection');
         }
 
         return domain!;
     }
 
-    private createPolicyConditions(ipAddressList: string[]): any {
+    private createPolicyConditions(ipAddressList: string[]| undefined): any {
         const condition: any = {};
 
-        if (ipAddressList.length > 0) {
+        if (ipAddressList && ipAddressList.length > 0)  {
             condition['IpAddress'] = {
                 'aws:SourceIp': ipAddressList
             }

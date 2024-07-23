@@ -16,9 +16,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as cdk from '@aws-cdk/core';
-import * as s3 from '@aws-cdk/aws-s3'
-import * as ssm from '@aws-cdk/aws-ssm'
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import { aws_s3 as s3 } from 'aws-cdk-lib';
+import { aws_ssm as ssm } from 'aws-cdk-lib'
 
 
 export interface ConstructCommonProps {
@@ -31,12 +32,12 @@ export interface ConstructCommonProps {
     variable?: any;
 }
 
-export class BaseConstruct extends cdk.Construct {
+export class BaseConstruct extends Construct {
     protected projectPrefix: string;
     protected commonProps: ConstructCommonProps;
     protected stackConfig: any;
 
-    constructor(scope: cdk.Construct, id: string, props: ConstructCommonProps) {
+    constructor(scope: Construct, id: string, props: ConstructCommonProps) {
         super(scope, id);
 
         this.projectPrefix = props.projectPrefix;

@@ -1,5 +1,5 @@
-import { expect as expectCDK, haveResource } from '@aws-cdk/assert';
-import * as cdk from '@aws-cdk/core';
+import { expect as expectCDK, haveResource } from 'aws-cdk-lib/assert';
+import * as cdk from 'aws-cdk-lib';
 import * as Temp from '../bin/stack/iot/thing-installer-stack';
 
 // test('SQS Queue Created', () => {

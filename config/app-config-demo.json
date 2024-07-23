@@ -60,28 +60,28 @@
         },
         "DataPipeline": {
             "Name": "DataPipelineStack",
-
             "IoTRuleEnable": false,
             "IoTRuleTopic": "$aws/rules",
             "IoTRuleTopic-Desc": "https://docs.aws.amazon.com/iot/latest/developerguide/iot-basic-ingest.html",
             "IoTRuleNameFirehoseIngestion": "firehose_ingestion",
-
             "DomainName": "iot-data",
             "MasterUserName": "iotdataadmin",
-            "ESConditionAddress": [],
-            "ElasticsearchSelection": "DEVELOP",
-            "ElasticsearchCandidate": {
+            "OSConditionAddress": [],
+            "OpenSearchSelection": "DEVELOP",
+            "OpenSearchCandidate": {
                 "DEVELOP": {
+                    "MasterNodeType": "t3.small.search",
+                    "DataNodeType": "t3.small.search"
                 },
                 "CUSTOM": {
                     "VolumeSize": 40,
                     "AZCount": 3,
                     "MasterNodeCount": 3,
-                    "MasterNodeType": "r5.large.elasticsearch",
+                    "MasterNodeType": "t3.small.search",
                     "DataNodeCount": 3,
-                    "DataNodeType": "r5.large.elasticsearch"
+                    "DataNodeType": "t3.small.search"
                 },
-                "LEGACY": {
+                    "LEGACY": {
                     "DomainEndpoint": ""
                 }
             }
